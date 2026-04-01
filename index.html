@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRipy Pipeline</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+        header {
+            background: linear-gradient(135deg, #1a3a5c, #2980b9);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        header h1 { font-size: 24px; font-weight: 600; }
+        header p { font-size: 13px; opacity: 0.8; margin-top: 3px; }
+
+        .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .card h2 { font-size: 16px; color: #1a3a5c; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #e8f0fe; }
+
+        label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 500; }
+        input[type=text], input[type=password], select {
+            width: 100%; padding: 10px 12px; border: 1px solid #ddd;
+            border-radius: 8px; font-size: 14px; margin-bottom: 14px;
+            transition: border 0.2s;
+        }
+        input:focus, select:focus { outline: none; border-color: #2980b9; }
+
+        .folder-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+        .folder-row input { margin-bottom: 0; flex: 1; }
+        .btn-fetch {
+            padding: 10px 14px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+        .btn-fetch:hover { background: #1e8449; }
+        .btn-fetch:disabled { background: #95a5a6; cursor: not-allowed; }
+
+        #folder-picker {
+            display: none;
+            margin-bottom: 14px;
+        }
+        #folder-picker select {
+            margin-bottom: 0;
+            border-color: #27ae60;
+        }
+        .folder-picker-label {
+            font-size: 11px;
+            color: #27ae60;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .subfolder-section {
+            display: none;
+            margin-bottom: 14px;
+        }
+        .subfolder-section select {
+            border-color: #8e44ad;
+            margin-bottom: 0;
+        }
+        .subfolder-label {
+            font-size: 11px;
+            color: #8e44ad;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .loci-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .loci-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+        .loci-item:hover { border-color: #2980b9; background: #f0f7ff; }
+        .loci-item input[type=checkbox] { margin: 0; accent-color: #2980b9; }
+
+        .btn {
+            width: 100%; padding: 12px;
+            border: none; border-radius: 8px;
+            font-size: 15px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-primary { background: #2980b9; color: white; }
+        .btn-primary:hover { background: #1a6a9a; }
+        .btn-primary:disabled { background: #95a5a6; cursor: not-allowed; }
+        .btn-sm {
+            width: auto; padding: 6px 14px;
+            font-size: 13px; background: #2980b9;
+            color: white; border-radius: 6px;
+            border: none; cursor: pointer;
+        }
+        .btn-sm:hover { background: #1a6a9a; }
+
+        .select-btns { display: flex; gap: 8px; margin-bottom: 10px; }
+        .btn-outline {
+            padding: 5px 12px; font-size: 12px;
+            border: 1px solid #2980b9; color: #2980b9;
+            background: white; border-radius: 6px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-outline:hover { background: #2980b9; color: white; }
+
+        .progress-container {
+            background: #e8f0fe;
+            border-radius: 8px;
+            height: 24px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #2980b9, #27ae60);
+            border-radius: 8px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 40px;
+        }
+        .progress-label {
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 8px;
+            display: none;
+        }
+
+        #log-box {
+            background: #1e1e2e;
+            color: #a6e3a1;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 14px;
+            border-radius: 8px;
+            height: 220px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        .log-line { padding: 1px 0; }
+        .log-error { color: #f38ba8; }
+        .log-done { color: #89b4fa; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .status-idle { background: #e8f0fe; color: #1a6a9a; }
+        .status-running { background: #fef9e7; color: #d68910; }
+        .status-done { background: #eafaf1; color: #1e8449; }
+
+        .results-list { list-style: none; }
+        .results-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .results-list li:hover { border-color: #2980b9; background: #f8fbff; }
+
+        .full-width { grid-column: 1 / -1; }
+
+        .genome-row { display: flex; gap: 10px; align-items: flex-end; }
+        .genome-row > div { flex: 1; }
+
+        .spinner {
+            display: inline-block;
+            width: 12px; height: 12px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .spinner-dark {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border: 2px solid #27ae60;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .tip { font-size: 11px; color: #888; margin-top: 4px; margin-bottom: 12px; }
+        .selected-id { font-size: 11px; color: #555; margin-top: 4px; margin-bottom: 12px; font-family: monospace; background: #f5f5f5; padding: 4px 8px; border-radius: 4px; display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>🧬 STRipy Pipeline Dashboard</h1>
+        <p>Automated STR genotyping from Seven Bridges CGC · Prostate Cancer Research</p>
+    </div>
+</header>
+
+<div class="container">
+
+    <!-- Configuration Card -->
+    <div class="card">
+        <h2>⚙️ Configuration</h2>
+
+        <label>CGC API Token</label>
+        <input type="password" id="token" placeholder="Enter your CGC token..." />
+
+        <label>CGC Folder</label>
+        <div class="folder-row">
+            <select id="folder_id" onchange="onFolderDropdown()" style="margin-bottom:0; flex:1;">
+                <option value="">-- Select a folder --</option>
+                {% for folder in folders %}
+                <option value="{{ folder.id }}">{{ folder.name }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn-fetch" id="refresh-btn" onclick="refreshFolders()">🔄 Refresh</button>
+        </div>
+        <p class="tip">Select a folder or click Refresh to fetch latest folders from CGC</p>
+        <input type="text" id="folder_id_manual" placeholder="Or paste folder ID manually..." oninput="document.getElementById('folder_id').value=this.value" />
+
+        <div class="genome-row">
+            <div>
+                <label>Reference Genome</label>
+                <select id="genome">
+                    <option value="hg38">hg38 (GRCh38)</option>
+                    <option value="hg19">hg19 (GRCh37)</option>
+                    <option value="hs1">hs1 (T2T-CHM13)</option>
+                </select>
+            </div>
+            <div>
+                <label>Sample Sex</label>
+                <select id="sex">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="run-btn" onclick="startPipeline()">
+            ▶ Run Pipeline
+        </button>
+    </div>
+
+    <!-- Loci Selection Card -->
+    <div class="card">
+        <h2>🎯 Select Loci</h2>
+        <div class="select-btns">
+            <button class="btn-outline" onclick="selectAll()">Select All</button>
+            <button class="btn-outline" onclick="selectNone()">Clear</button>
+            <button class="btn-outline" onclick="selectNeuro()">Neurological</button>
+        </div>
+        <div class="loci-grid">
+            {% for locus in loci %}
+            <label class="loci-item">
+                <input type="checkbox" name="loci" value="{{ locus }}" {% if locus == 'AR' %}checked{% endif %}>
+                {{ locus }}
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Log Output Card -->
+    <div class="card full-width">
+        <h2>📋 Pipeline Log</h2>
+        <span class="status-badge status-idle" id="status-badge">● Idle</span>
+        <p class="progress-label" id="progress-label">Processing sample...</p>
+        <div class="progress-container" id="progress-container">
+            <div class="progress-bar" id="progress-bar" style="width:0%">0%</div>
+        </div>
+        <div id="log-box">
+            <div class="log-line" style="color:#6c7086">Pipeline ready. Configure your settings and click Run.</div>
+        </div>
+    </div>
+
+    <!-- Results Card -->
+    <div class="card full-width">
+        <h2>📁 Results</h2>
+        <ul class="results-list" id="results-list">
+            <li style="color:#888; justify-content:center;">No results yet — run the pipeline to generate reports.</li>
+        </ul>
+    </div>
+
+</div>
+
+<script>
+    let pollInterval = null;
+
+    // ── Loci helpers ──────────────────────────────────────────────
+    function selectAll() {
+        document.querySelectorAll('input[name=loci]').forEach(cb => cb.checked = true);
+    }
+    function selectNone() {
+        document.querySelectorAll('input[name=loci]').forEach(cb => cb.checked = false);
+    }
+    function selectNeuro() {
+        const neuro = ['AFF2','AR','ATN1','ATXN1','ATXN2','ATXN3','ATXN7','ATXN10','C9ORF72','CACNA1A','CNBP','DMPK','FMR1','FXN','HTT','JPH3','NOP56','NOTCH2NLC','PABPN1','PPP2R2B','RFC1','TBP'];
+        document.querySelectorAll('input[name=loci]').forEach(cb => {
+            cb.checked = neuro.includes(cb.value);
+        });
+    }
+
+    // ── Folder fetching ───────────────────────────────────────────
+    function fetchFolders() {
+        const token = document.getElementById('token').value.trim();
+        if (!token) { alert('Please enter your CGC token first!'); return; }
+
+        const btn = document.getElementById('fetch-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-dark"></span> Fetching...';
+
+        fetch('/projects', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token})
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '🔍 Fetch';
+
+            if (data.error) { alert('Error: ' + data.error); return; }
+
+            const sel = document.getElementById('project-select');
+            sel.innerHTML = '<option value="">-- Choose a project --</option>';
+            data.projects.forEach(p => {
+                sel.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
+
+            document.getElementById('project-picker').style.display = 'block';
+            document.getElementById('folder-picker').style.display = 'none';
+            document.getElementById('subfolder-section').style.display = 'none';
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = '🔍 Fetch';
+            alert('Failed to connect to CGC. Check your token.');
+        });
+    }
+
+    function fetchTopFolders() {
+        const token = document.getElementById('token').value.trim();
+        const project = document.getElementById('project-select').value;
+        if (!project) return;
+
+        fetch('/folders', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token, project_id: project})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { alert('Error: ' + data.error); return; }
+
+            const sel = document.getElementById('folder-select');
+            sel.innerHTML = '<option value="">-- Choose a folder --</option>';
+            data.folders.forEach(f => {
+                sel.innerHTML += `<option value="${f.id}">${f.name}</option>`;
+            });
+
+            document.getElementById('folder-picker').style.display = 'block';
+            document.getElementById('subfolder-section').style.display = 'none';
+        });
+    }
+
+    function onFolderSelect() {
+        const token = document.getElementById('token').value.trim();
+        const folderId = document.getElementById('folder-select').value;
+        const folderName = document.getElementById('folder-select').options[document.getElementById('folder-select').selectedIndex].text;
+        if (!folderId) return;
+
+        // Set the folder ID in the input
+        document.getElementById('folder_id').value = folderId;
+        showSelectedId(folderId, folderName);
+
+        // Fetch subfolders
+        fetch('/folders', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token, parent_id: folderId})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error || data.folders.length === 0) {
+                document.getElementById('subfolder-section').style.display = 'none';
+                return;
+            }
+
+            const sel = document.getElementById('subfolder-select');
+            sel.innerHTML = '<option value="">-- Use this folder --</option>';
+            data.folders.forEach(f => {
+                sel.innerHTML += `<option value="${f.id}">${f.name}</option>`;
+            });
+            document.getElementById('subfolder-section').style.display = 'block';
+        });
+    }
+
+    function onSubfolderSelect() {
+        const sel = document.getElementById('subfolder-select');
+        const folderId = sel.value;
+        const folderName = sel.options[sel.selectedIndex].text;
+
+        if (!folderId) {
+            // Revert to parent folder
+            const parentId = document.getElementById('folder-select').value;
+            const parentName = document.getElementById('folder-select').options[document.getElementById('folder-select').selectedIndex].text;
+            document.getElementById('folder_id').value = parentId;
+            showSelectedId(parentId, parentName);
+        } else {
+            document.getElementById('folder_id').value = folderId;
+            showSelectedId(folderId, folderName);
+        }
+    }
+
+    function showSelectedId(id, name) {
+        const el = document.getElementById('selected-id');
+        el.style.display = 'block';
+        el.innerHTML = `✓ Selected: <strong>${name}</strong> &nbsp;|&nbsp; ID: ${id}`;
+    }
+
+    // ── Pipeline ──────────────────────────────────────────────────
+    function onFolderDropdown() {
+        const val = document.getElementById('folder_id').value;
+        document.getElementById('folder_id_manual').value = val;
+    }
+
+    function refreshFolders() {
+        const token = document.getElementById('token').value.trim();
+        if (!token) {
+            alert('Please enter your CGC token first!');
+            return;
+        }
+
+        const btn = document.getElementById('refresh-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-dark"></span> Refreshing...';
+
+        fetch('/refresh_folders', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token})
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Refresh';
+
+            if (data.error) {
+                alert('Error: ' + data.error);
+                return;
+            }
+
+            const sel = document.getElementById('folder_id');
+            const currentVal = sel.value;
+            sel.innerHTML = '<option value="">-- Select a folder --</option>';
+            data.folders.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.textContent = f.name;
+                if (f.id === currentVal) opt.selected = true;
+                sel.appendChild(opt);
+            });
+
+            alert(`Folders refreshed! Found ${data.count} folders.`);
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Refresh';
+            alert('Failed to refresh folders. Check your token.');
+        });
+    }
+
+    function startPipeline() {
+        const token = document.getElementById('token').value.trim();
+        const folder_id = document.getElementById('folder_id').value.trim() || document.getElementById('folder_id_manual').value.trim();
+        const genome = document.getElementById('genome').value;
+        const sex = document.getElementById('sex').value;
+        const loci = [...document.querySelectorAll('input[name=loci]:checked')].map(cb => cb.value);
+
+        if (!token || !folder_id) {
+            alert('Please enter your CGC Token and Folder ID!');
+            return;
+        }
+        if (loci.length === 0) {
+            alert('Please select at least one locus!');
+            return;
+        }
+
+        document.getElementById('run-btn').disabled = true;
+        document.getElementById('run-btn').innerHTML = '<span class="spinner"></span> Running...';
+        document.getElementById('log-box').innerHTML = '';
+        setStatus('running');
+
+        fetch('/run', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token, folder_id, loci, genome, sex})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'error') {
+                alert(data.message);
+                resetBtn();
+            } else {
+                pollInterval = setInterval(pollLogs, 2000);
+            }
+        });
+    }
+
+    function pollLogs() {
+        fetch('/logs').then(r => r.json()).then(data => {
+            const box = document.getElementById('log-box');
+            box.innerHTML = data.logs.map(line => {
+                let cls = 'log-line';
+                if (line.includes('ERROR')) cls += ' log-error';
+                if (line.includes('Done with') || line.includes('complete')) cls += ' log-done';
+                if (line.includes('skipping REViewer')) cls += ' log-line" style="color:#f9ca24';
+                return `<div class="${cls}">${line}</div>`;
+            }).join('');
+            box.scrollTop = box.scrollHeight;
+
+            if (!data.running) {
+                clearInterval(pollInterval);
+                resetBtn();
+                setStatus('done');
+                fetchResults();
+                document.getElementById('progress-container').style.display = 'none';
+                document.getElementById('progress-label').style.display = 'none';
+            }
+        });
+
+        // Poll progress separately
+        fetch('/progress').then(r => r.json()).then(data => {
+            if (data.total > 0) {
+                const pct = data.percent;
+                const bar = document.getElementById('progress-bar');
+                const container = document.getElementById('progress-container');
+                const label = document.getElementById('progress-label');
+
+                container.style.display = 'block';
+                label.style.display = 'block';
+                bar.style.width = pct + '%';
+                bar.textContent = pct + '%';
+                label.textContent = `Sample ${data.current} of ${data.total}: ${data.sample}`;
+            }
+        });
+    }
+
+    function fetchResults() {
+        fetch('/results').then(r => r.json()).then(data => {
+            const list = document.getElementById('results-list');
+            if (data.files.length === 0) {
+                list.innerHTML = '<li style="color:#888;justify-content:center;">No results yet.</li>';
+                return;
+            }
+            list.innerHTML = data.files.map(f => `
+                <li>
+                    <span>📄 ${f}</span>
+                    <a href="/download/${f}" download>
+                        <button class="btn-sm">⬇ Download</button>
+                    </a>
+                </li>
+            `).join('');
+        });
+    }
+
+    function setStatus(status) {
+        const badge = document.getElementById('status-badge');
+        if (status === 'running') {
+            badge.className = 'status-badge status-running';
+            badge.textContent = '● Running...';
+        } else if (status === 'done') {
+            badge.className = 'status-badge status-done';
+            badge.textContent = '✓ Complete';
+        } else {
+            badge.className = 'status-badge status-idle';
+            badge.textContent = '● Idle';
+        }
+    }
+
+    function resetBtn() {
+        const btn = document.getElementById('run-btn');
+        btn.disabled = false;
+        btn.innerHTML = '▶ Run Pipeline';
+    }
+
+    fetchResults();
+</script>
+
+</body>
+</html>
